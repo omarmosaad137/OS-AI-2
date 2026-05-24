@@ -1,115 +1,580 @@
-# OS Legal CRM + AI — Role Based Version
+# OS Legal v3 — Module 1: Production Authentication and Roles
 
-This is the newer version requested.
+This module starts the final production version.
 
-## Included features
+## What this module includes
 
-- Manager user login
-- Law firm user login
-- Client user login
-- Role-based dashboards and menus
-- Client portal showing only that client's matters
-- Leads
-- Matters
-- Documents
-- Tasks
-- Updates
-- Calendar
-- Phonebook
-- User management
-- Document templates:
-  - Contracts
-  - Engagement letters
-  - Legal notices
-  - Client update emails
-  - Arabic update template
-- AI assistant:
-  - Draft client update
-  - Draft legal notice
-  - Draft engagement letter
-  - Summarize matter
-  - Translate English/Arabic
-  - Draft contract clause
-- Vercel API route for AI:
-  - `/api/ai`
-  - Uses server-side `OPENAI_API_KEY`
-  - Falls back to demo AI if no API key is configured
+- Supabase Auth login
+- Manager role
+- Law firm user role
+- Client user role
+- Manager can create:
+  - manager users
+  - law firm users
+  - client users
+- Manager can create clients
+- Client users are linked to client records
+- Row Level Security starter policies
+- Vercel API routes with service-role key, never exposed to browser
+- No demo passwords stored in frontend code
 
-## Demo users
+## Initial users requested
+
+Create these through the seed script, not in frontend code:
 
 Manager:
-- username: `manager`
-- password: `Manager@123`
+- Omar Mosaad
+- omar@os-legal.net
+- password: use the password Omar provided
 
 Law firm user:
-- username: `lawyer`
-- password: `Lawyer@123`
+- zeyad sameh
+- zeyad@os-legal.net
+- password: use the password Omar provided
 
-Client user:
-- username: `client`
-- password: `Client@123`
+## Setup steps
 
-## Important security note
+### 1. Create Supabase project
 
-The demo login stores usernames/passwords in browser storage so you can test quickly.
-Do not use this for real client data until proper authentication is connected.
+Create a new Supabase project.
 
-Production authentication should use:
-- Supabase Auth
-- Firebase Auth
-- Auth0
-- Clerk
-- or a custom secure backend
+### 2. Run SQL schema
 
-## Install locally
+Open Supabase SQL Editor and run:
+
+```text
+supabase/schema.sql
+```
+
+### 3. Prepare local environment
+
+Copy:
+
+```text
+.env.local.example
+```
+
+to:
+
+```text
+.env.local
+```
+
+Fill:
+
+```text
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+MANAGER_EMAIL=omar@os-legal.net
+MANAGER_PASSWORD=
+MANAGER_FULL_NAME=Omar Mosaad
+LAWFIRM_EMAIL=zeyad@os-legal.net
+LAWFIRM_PASSWORD=
+LAWFIRM_FULL_NAME=zeyad sameh
+```
+
+The passwords must be placed only in `.env.local`, not committed to GitHub.
+
+### 4. Seed initial users
+
+Run:
 
 ```bash
 npm install
+npm run seed:users
+```
+
+### 5. Add Vercel environment variables
+
+In Vercel Project Settings > Environment Variables add:
+
+```text
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+Then redeploy.
+
+### 6. Login
+
+Use:
+
+```text
+omar@os-legal.net
+```
+
+and the password you placed in `.env.local`.
+
+## Important security notes
+
+- Do not commit `.env.local`.
+- Do not put passwords inside React code.
+- Do not expose `SUPABASE_SERVICE_ROLE_KEY` to the browser.
+- Client access must be enforced by RLS, not just the interface.
+
+
+## v1.1 local testing fix
+
+Client creation now works locally with:
+
+```bash
 npm run dev
 ```
 
-## Deploy on Vercel
+The old client button used `/api/admin/create-client`, which is a Vercel serverless API route. Vite does not run Vercel API routes during normal local development.
 
-1. Upload this folder to GitHub.
-2. Import into Vercel.
-3. Settings:
-   - Framework: Vite
-   - Build command: npm run build
-   - Output directory: dist
-4. Deploy.
+User creation still uses `/api/admin/create-user` because creating Supabase Auth users requires the service role key. Do not expose the service role key in browser code.
 
-## Enable real AI
+To test user creation locally, run:
 
-In Vercel:
-
-1. Project Settings
-2. Environment Variables
-3. Add:
-
-```text
-OPENAI_API_KEY=your_api_key
+```bash
+npm install -g vercel
+vercel dev
 ```
 
-4. Redeploy.
-
-The AI key is used only in `/api/ai.js`, never in frontend browser code.
+Or deploy to Vercel and add the server-side environment variables.
 
 
-## v2.1 fixes
+## Module 2 — Law Firm User Permissions + Invoice Requests
 
-This package fixes two issues seen in the screenshots:
+This module changes the law firm user role as requested.
 
-1. Template preview line breaks:
-   - Old saved templates may show literal `\n`.
-   - The app now normalizes saved templates, emails and updates so line breaks render properly.
-   - A `Reset Demo Data` button was added in Settings if old browser data still causes issues.
+### Law firm user CAN see
 
-2. AI error message:
-   - `/api/ai` now returns a detailed configuration checklist instead of only `OpenAI API request failed`.
-   - The model is configurable using:
+- Dashboard
+- Clients list
+- All matters
+- Invoice Requests page
+
+### Law firm user CANNOT see
+
+- Leads
+- Professional fee / finance dashboards
+- Engagement letters
+- User management
+- Audit log
+- Manager-only finance controls
+
+### Law firm user CAN request invoice/disbursement for
+
+- Court fee
+- Translation
+- Expert fee
+- Government fee
+- Courier / service fee
+- Notary fee
+- Other disbursement
+
+### Manager CAN
+
+- See all invoice requests
+- Approve or reject invoice requests
+- Create clients
+- Create users
+
+### If Module 1 is already installed
+
+Run this SQL file in Supabase SQL Editor:
 
 ```text
-OPENAI_MODEL=gpt-5.2
+supabase/migrations/module2_permissions_invoice_requests.sql
 ```
 
-If no `OPENAI_API_KEY` is configured, the AI page returns a demo response instead of failing.
+Then restart local app or redeploy Vercel.
+
+
+## Module 2.1 — Finance User Role
+
+This package adds a dedicated `finance` role.
+
+### Finance user can access
+
+- Dashboard
+- Clients
+- All matters
+- Invoice requests
+- Finance overview
+- Pending invoice requests
+
+### Finance user can do
+
+- View all invoice/disbursement requests
+- Approve or reject invoice requests
+- View clients and matters
+- Create invoice/disbursement requests if needed
+
+### Finance user does not do
+
+- Create users
+- Manage manager/lawfirm/client accounts
+- Access manager-only audit controls
+
+### To update an existing Module 2 database
+
+Run this SQL file in Supabase SQL Editor:
+
+```text
+supabase/migrations/module2_1_finance_role.sql
+```
+
+### To create a finance user
+
+Login as manager, open Users, create user with role:
+
+```text
+Finance User
+```
+
+Example:
+- Full name: Accounts / Finance
+- Email: accounts@os-legal.net
+- Temporary password: ChangeMe@123
+- Role: Finance User
+
+
+## Module 3 — Finance Operations
+
+This module adds a full finance workflow.
+
+### Finance user tools added
+
+- Finance overview
+- Internal invoice/disbursement request queue
+- Engagement letter records
+- Invoice creation linked to:
+  - Matter
+  - Client
+  - Engagement letter
+- Manager approval queue for invoices
+- Payment calendar
+- Payment reminder schedule
+- Payment reminder email drafting
+- Mark reminder as sent
+- Mark invoice approved / sent / paid
+
+### Workflow
+
+1. Law firm user submits internal invoice/disbursement request.
+2. Finance user reviews the request.
+3. Finance creates invoice linked to the matter and engagement letter.
+4. Invoice starts as `pending_approval`.
+5. Manager approves invoice.
+6. Finance marks invoice as sent and contacts client.
+7. Payment reminders are automatically scheduled around the due date.
+8. Finance opens reminder email and marks reminder as sent.
+9. Finance marks invoice as paid once payment is received.
+
+### Automatic reminders
+
+The system now automatically creates reminder records for:
+
+- 7 days before due date
+- 3 days before due date
+- due date
+- 3 days after due date
+
+Actual background email sending requires a later email provider module such as SendGrid, Mailgun, Microsoft Graph, Gmail API, or SMTP through a secure server route.
+
+### Database migration
+
+If you already installed Module 2.1, run:
+
+```text
+supabase/migrations/module3_finance_operations.sql
+```
+
+in Supabase SQL Editor.
+
+
+## Module 3.1 — VAT Invoicing
+
+This module adds VAT handling to invoices.
+
+### Default VAT treatment
+
+- Professional fee: VAT applies by default
+- Consultation: VAT applies by default
+- Drafting fee: VAT applies by default
+- Legal services: VAT applies by default
+- Translation: VAT applies by default, but can be changed manually
+- Court fee: No VAT by default
+- Government fee: No VAT by default
+- Notary fee: No VAT by default
+- Other disbursement: No VAT by default, but can be changed manually
+
+### Fields added
+
+- VAT applicable
+- VAT rate
+- VAT amount
+- Total amount
+
+### Migration
+
+Run this in Supabase SQL Editor:
+
+```text
+supabase/migrations/module3_1_vat_invoicing.sql
+```
+
+### Note
+
+The app supports VAT defaults, but finance can manually change VAT on/off per invoice. This is important because some costs may be true disbursements while others may be reimbursements or taxable services.
+
+
+## Module 4 — HR System
+
+This module adds an HR system to the OS Legal app.
+
+### New role
+
+- HR User
+
+### HR module includes
+
+- Employee records
+- HR documents tracker
+- Leave requests and approval
+- Attendance records
+- Payroll draft / approval / paid workflow
+- Employee salary fields
+- Basic salary and total salary
+- Payroll deductions and allowances
+
+### Access
+
+Manager:
+- full HR access
+
+HR user:
+- create employees
+- manage HR documents
+- manage leave
+- manage attendance
+- view payroll
+
+Finance user:
+- view employees
+- view HR data
+- create payroll items
+- approve/pay payroll
+
+Law firm user:
+- no HR access
+
+Client user:
+- no HR access
+
+### Migration
+
+Run this in Supabase SQL Editor:
+
+```text
+supabase/migrations/module4_hr_system.sql
+```
+
+
+## Module 5 — Communication + Search
+
+This module adds:
+
+### Team internal chat
+
+- General chat
+- Matter-linked chat
+- Channels:
+  - general
+  - litigation
+  - corporate
+  - finance
+  - hr
+  - urgent
+- Internal users only:
+  - manager
+  - lawfirm
+  - finance
+  - hr
+- Client users cannot access internal chat
+
+### Email service
+
+- Email draft queue
+- Matter-linked emails
+- Client update generator
+- Manual mailto open
+- Server-side send route:
+  - `/api/email/send`
+- Resend integration support
+
+### Search engine
+
+Global search across:
+
+- Matters
+- Clients
+- Employees
+- Emails
+- Internal chat
+
+### Email provider setup
+
+Without environment variables, email works in demo/manual mode.
+
+To enable real sending through Resend, add in Vercel:
+
+```text
+RESEND_API_KEY=
+EMAIL_FROM=OS Legal <noreply@yourdomain.com>
+```
+
+Then redeploy.
+
+### Database migration
+
+Run in Supabase SQL Editor:
+
+```text
+supabase/migrations/module5_communication_search.sql
+```
+
+
+## Module 6A — Operations Calendar
+
+This module adds:
+
+### Court Calendar
+
+- Court name
+- Case number
+- Matter link
+- Hearing date and time
+- Courtroom / link
+- Assigned lawyer
+- Client attendance required
+- Lawyer attendance required
+- Documents required
+- Preparation notes
+- Judgment expected date
+- Appeal deadline
+- Hearing status tracking
+
+### Expert Missions
+
+- Expert name
+- Expert type
+- Expert contact
+- Appointment date
+- Deposit amount
+- Deposit deadline
+- Deposit status
+- Expert meeting date/location
+- Documents submitted
+- Documents pending
+- Court questions/issues
+- Site visit date
+- Preliminary report date
+- Objection deadline
+- Final report date
+- Expert status tracking
+
+### Daily Meetings
+
+- Meeting date/time
+- Meeting type
+- Attendees
+- Agenda
+- Decisions
+- Follow-up date
+- Action items
+- Owner and deadline
+- Priority and status
+
+### Database migration
+
+Run in Supabase SQL Editor:
+
+```text
+supabase/migrations/module6a_operations_calendar.sql
+```
+
+
+## Module 6B — Modern UI + Tasks + Arabic + Avatars + Announcements
+
+This module improves the app experience.
+
+### Added
+
+- Modern dashboard layout
+- Friendly greeting: Good morning / afternoon / evening
+- Arabic / English switch
+- User photo/avatar support
+- Announcement bar
+- Announcements module
+- Dedicated Tasks page
+- Task creation fixed and accessible from navigation
+- More modern cards, actions, and layout
+
+### Migration
+
+Run:
+
+```text
+supabase/migrations/module6b_modern_ui_tasks_announcements.sql
+```
+
+### User photos
+
+Manager can add a photo URL when creating a user.
+
+The profile table now has:
+
+```text
+avatar_url
+```
+
+
+## Module 6C — UI, Arabic, Library, Tasks Fix
+
+This package corrects the previous UI module.
+
+### Fixed / added
+
+- Arabic/English switch
+- RTL support
+- Modern dashboard layout
+- Friendly welcome panel
+- User avatar/photo display
+- Announcement bar
+- Manager announcement creation
+- Full template library
+- Task creation page
+- Task editing:
+  - title
+  - owner
+  - due date
+  - priority
+  - status
+- Template preview with matter variables
+
+### Database migration
+
+Run:
+
+```text
+supabase/migrations/module6c_ui_library_tasks_arabic_fix.sql
+```
+
+### Variables supported in library templates
+
+```text
+{client}
+{matter_ref}
+{matter_title}
+{opponent}
+{stage}
+{deadline}
+{next_step}
+{firm}
+```

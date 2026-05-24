@@ -1,7 +1,7 @@
 {
-  "name": "OS Legal CRM + AI",
+  "name": "OS Legal v3",
   "short_name": "OS Legal",
-  "description": "Role-based OS Legal CRM with AI assistant.",
+  "description": "OS Legal production CRM authentication module.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
